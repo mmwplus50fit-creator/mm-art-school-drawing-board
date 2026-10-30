@@ -6,6 +6,8 @@ A quiet place to collect references and practice drawing. Buildless HTML, CSS an
 
 Open **Runners**, choose images downloaded from your Drive archive, and start a timed session. Create more boards for other studies. Choose 30 seconds to 20 minutes per reference, a reference count, and shuffle or sequential order. Pause, resume, skip, or enter fullscreen while drawing.
 
+On an open board, paste a copied image with **Ctrl+V** (or **⌘+V**). For Windows screenshots, use **Win+Shift+S**, snip the reference, return to the board and paste. The image is named automatically and saved to that board. The import card also accepts dropped image files and **choose files**. Paste works while the board is visible and no text field or dialog is being edited; it does not read clipboard contents in the background or ask for clipboard permissions.
+
 Supported imports: JPG, PNG, WebP, GIF and AVIF, up to 20 MB per image. Convert HEIC to JPG or PNG before importing. References are displayed uncropped in drawing sessions.
 
 ## Storage and backups
@@ -27,3 +29,5 @@ No paid services, backend credentials, or environment variables are required. Ho
 - JavaScript syntax and Git whitespace checks.
 - Browser check: create/rename a board, import an image, reload and verify persistence, run/pause/skip a session, export and restore a backup.
 - Keep personal reference images out of this public repository.
+
+Clipboard and board-routing regression checks: `node --test tests/clipboard.test.cjs`.

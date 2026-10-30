@@ -24,12 +24,33 @@ async function nameBoard(rename=false) { const dlg=$('name-dialog');$('dialog-ti
 function confirmDelete(title,text) { $('confirm-title').textContent=title;$('confirm-text').textContent=text;const dlg=$('confirm-dialog');dlg.showModal();return new Promise(resolve=>{dlg.onclose=()=>resolve(dlg.returnValue==='delete');}); }
 async function addImages(files) {
  if(busy)return notify('Please wait for the current save to finish.'); const boardId=selected; if(!boardId)return;
+ if(!files.length)return notify('No image files found. Paste or drop an image, or choose files.');
+ const boardName=currentBoard().name;
  const added=[], rejected=[]; busy=true; $('choose-images').disabled=true;
  try { for(const file of files){if(!acceptedTypes.has(file.type)||file.size>20*1024*1024){rejected.push(file.name);continue;}try{const bitmap=await createImageBitmap(file);bitmap.close();added.push({id:uid(),name:file.name,blob:file});}catch{rejected.push(file.name);}}
- if(added.length){const next=structuredClone(library);next.boards.find(b=>b.id===boardId).images.push(...added);await persist(next);openBoard(boardId);if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});}
- notify((added.length?added.length+' reference'+(added.length===1?'':'s')+' added. ':'')+(rejected.length?rejected.length+' file(s) could not be imported. Use a JPG, PNG, WebP, GIF or AVIF under 20 MB.':''));
+ if(added.length){const next=structuredClone(library);next.boards.find(b=>b.id===boardId).images.push(...added);await persist(next);if(!$('board-view').hidden&&selected===boardId)openBoard(boardId);else if(!$('library').hidden)renderLibrary();if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});}
+ notify((added.length?added.length+' image'+(added.length===1?'':'s')+' added to '+boardName+'. ':'')+(rejected.length?rejected.length+' file(s) could not be imported. Use a JPG, PNG, WebP, GIF or AVIF under 20 MB.':''));
  }catch(err){notify('Could not store these images. Your previous library is safe. '+err.message);}finally{busy=false;$('choose-images').disabled=false;$('file-input').value='';}
 }
+function clipboardImages(data) {
+ const files=[];
+ for(const item of Array.from(data?.items||[])){
+  if(item.kind==='file'&&item.type.startsWith('image/')){const file=item.getAsFile();if(file)files.push(file);}
+ }
+ // Some browsers supply clipboard files without DataTransferItem entries.
+ if(!files.length)files.push(...Array.from(data?.files||[]).filter(file=>file.type.startsWith('image/')));
+ return files.map(file=>{const ext=({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/avif':'avif' })[file.type]||'image';return new File([file],'pasted-'+new Date().toISOString().replace(/[:.]/g,'-')+'-'+uid().slice(0,8)+'.'+ext,{type:file.type});});
+}
+function handleImagePaste(event) {
+ if($('board-view').hidden||!currentBoard()||document.querySelector('dialog[open]'))return;
+ const target=event.target;
+ if(target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
+ const files=clipboardImages(event.clipboardData);
+ if(!files.length){notify('Clipboard does not contain an image. Copy an image or take a screenshot, then paste here.');return;}
+ event.preventDefault();
+ addImages(files);
+}
+document.addEventListener('paste',handleImagePaste);
 function shuffle(items){for(let i=items.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}return items;}
 function startSession(){if(busy)return notify('Please wait for your images to finish saving.');const board=currentBoard();const total=Number($('rounds').value);if(!Number.isInteger(total)||total<1||total>board.images.length)return notify('Choose between 1 and '+board.images.length+' references.');let images=[...board.images];if($('shuffle').checked)shuffle(images);running={images:images.slice(0,total),index:0,duration:Number($('duration').value)*1000,paused:false};$('session-board').textContent=board.name;releaseUrls();show('session');loadRound();clearInterval(interval);interval=setInterval(tick,200);}
 function loadRound(){if(sessionUrl)URL.revokeObjectURL(sessionUrl);const img=running.images[running.index];sessionUrl=URL.createObjectURL(img.blob);$('reference').src=sessionUrl;$('reference').alt=img.name;$('reference-name').textContent=img.name;$('round-label').textContent='Round '+(running.index+1)+' of '+running.images.length;running.remaining=running.duration;running.deadline=performance.now()+running.duration;$('pause').textContent=running.paused?'Resume':'Pause';drawClock();}

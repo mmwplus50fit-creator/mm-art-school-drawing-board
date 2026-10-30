@@ -1,0 +1,4 @@
+/* Clipboard guidance shares the existing import card and keyboard focus style. */
+.dropzone .paste-title { font-size: 14px; font-weight: 600; color: var(--green); margin: 15px 0 10px; }
+.dropzone kbd { font: inherit; font-size: 11px; border: 1px solid #c7cebf; border-bottom-width: 2px; padding: 2px 5px; border-radius: 4px; background: #fafbf6; color: var(--ink); white-space: nowrap; }
+.dropzone #paste-help { line-height: 2; }
