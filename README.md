@@ -4,7 +4,9 @@ A quiet place to collect references and practice drawing. Buildless HTML, CSS an
 
 ## Use it
 
-Open **Runners**, choose images downloaded from your Drive archive, and start a timed session. Create more boards for other studies. Choose 30 seconds to 20 minutes per reference, a reference count, and shuffle or sequential order. Pause, resume, skip, or enter fullscreen while drawing.
+Open **Runners**, choose images downloaded from your Drive archive, and start a timed session. Create more boards for other studies. Reference rounds initially default to all images in the board. Choose a reference count and seconds per image, a total duration and seconds per image, or a total duration and reference count. The live summary shows the calculated drawing time and any repeated rounds. Pause, resume, skip, or enter fullscreen while drawing.
+
+Sessions cycle through images when more rounds than available images are needed. Shuffle uses every image once per pass and avoids an immediate repeat between passes when there is more than one image. For a total duration that is not divisible by the time per reference, the final round is shorter so the planned drawing time matches the target. Pauses add wall-clock time; skipping advances early. Choose 1–1200 seconds per reference; total-duration plans allow up to 480 minutes and 10,000 rounds.
 
 On an open board, paste a copied image with **Ctrl+V** (or **⌘+V**). For Windows screenshots, use **Win+Shift+S**, snip the reference, return to the board and paste. The image is named automatically and saved to that board. The import card also accepts dropped image files and **choose files**. Paste works while the board is visible and no text field or dialog is being edited; it does not read clipboard contents in the background or ask for clipboard permissions.
 
@@ -32,4 +34,4 @@ No paid services, backend credentials, or environment variables are required. Ho
 - Browser check: create/rename a board, import an image, reload and verify persistence, run/pause/skip a session, export and restore a backup.
 - Keep personal reference images out of this public repository.
 
-Clipboard and board-routing regression checks: `node --test tests/clipboard.test.cjs`.
+Regression checks: `node --test tests/*.test.cjs`.

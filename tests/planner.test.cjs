@@ -1,0 +1,12 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {planPractice,practiceSequence}=require('../planner.js');
+const base={mode:'count',rounds:8,seconds:30,minutes:10,imageCount:8};
+test('all references at 30 seconds produces the expected total',()=>{const p=planPractice(base);assert.equal(p.count,8);assert.equal(p.totalMs,240000);assert.equal(p.repeats,0);});
+test('10 minutes at 30 seconds produces 20 rounds, with recycling',()=>{const p=planPractice({...base,mode:'time'});assert.equal(p.count,20);assert.equal(p.totalMs,600000);assert.equal(p.repeats,12);});
+test('total plus reference count fits the time per image',()=>{const p=planPractice({...base,mode:'fit',rounds:10,minutes:20});assert.equal(p.durations[0],120000);assert.equal(p.totalMs,1200000);});
+test('non-divisible duration uses a shorter last round and ends at the target',()=>{const p=planPractice({...base,mode:'time',minutes:1,seconds:45});assert.deepEqual(p.durations,[45000,15000]);assert.equal(p.totalMs,60000);});
+test('fit mode conserves total duration despite rounding',()=>{const p=planPractice({...base,mode:'fit',rounds:7,minutes:1});assert.equal(p.totalMs,60000);assert.equal(p.durations.length,7);});
+test('sequential cycling uses each image before repeating',()=>{assert.deepEqual(practiceSequence([{id:'a'},{id:'b'},{id:'c'}],8,false).map(i=>i.id),['a','b','c','a','b','c','a','b']);});
+test('shuffle uses full passes with no immediate boundary repeats',()=>{const pool=[{id:'a'},{id:'b'},{id:'c'}];for(let n=0;n<50;n++){const result=practiceSequence(pool,31,true);for(let i=1;i<result.length;i++)assert.notEqual(result[i].id,result[i-1].id);for(let i=0;i<30;i+=3)assert.equal(new Set(result.slice(i,i+3).map(x=>x.id)).size,3);}});
+test('one-image boards can repeat to fill a session',()=>{assert.equal(practiceSequence([{id:'a'}],20,true).length,20);});
+test('empty boards and invalid settings cannot start a session',()=>{for(const settings of [{imageCount:0},{rounds:0},{seconds:0},{mode:'time',minutes:0},{mode:'fit',minutes:1,rounds:61}])assert.throws(()=>planPractice({...base,...settings}));});
