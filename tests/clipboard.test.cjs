@@ -6,10 +6,10 @@ const { webcrypto } = require('node:crypto');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../app.js'), 'utf8');
 const importer = source.slice(source.indexOf('async function addImages('), source.indexOf('function shuffle('));
 function setup() {
-  const nodes = Object.fromEntries(['board-view','library','choose-images','file-input'].map(id=>[id,{ hidden:id==='library', disabled:false, value:'' }]));
+  const nodes = Object.fromEntries(['board-view','library','choose-images','file-input','dropzone'].map(id=>[id,{ hidden:id==='library', disabled:false, value:'',classList:{add(){},remove(){}} }]));
   const state = { notifications:[], imports:[], opened:[], modal:false, pending:null };
   const context = vm.createContext({ File, Blob, Date, Array, Set, crypto:webcrypto, structuredClone, navigator:{},
-    document:{querySelector:()=>state.modal,addEventListener(){}},
+    document:{querySelector:()=>state.modal,addEventListener(){}},window:{addEventListener(){}},
     $:id=>nodes[id],
     notify:message=>state.notifications.push(message),
     createImageBitmap:async()=>{if(state.pending)await state.pending;return {close(){}};},
@@ -31,3 +31,4 @@ test('text inputs, dialogs and other views keep normal paste behavior',()=>{for(
 test('shared importer saves all images to the selected board and confirms board name',async()=>{const env=setup();env.context.files=[image(),image()];await env.run('addImages(files)');assert.equal(env.context.saved.boards[0].images.length,2);assert.equal(env.context.saved.boards[1].images.length,0);assert.match(env.state.notifications[0],/2 images added to Runners/);});
 test('changing board during decoding does not misroute images or pull the user back',async()=>{const env=setup();let release;env.state.pending=new Promise(resolve=>release=resolve);env.context.files=[image()];const saving=env.run('addImages(files)');env.run("selected='faces'");release();await saving;assert.equal(env.context.saved.boards[0].images.length,1);assert.equal(env.context.saved.boards[1].images.length,0);assert.equal(env.state.opened.length,0);});
 test('unsupported and oversized inputs do not alter boards',async()=>{const env=setup();env.context.files=[new File(['text'],'note.txt',{type:'text/plain'}),{name:'huge.png',type:'image/png',size:21*1024*1024}];await env.run('addImages(files)');assert.equal(env.context.saved,undefined);assert.match(env.state.notifications[0],/2 file\(s\) could not be imported/);});
+test('drop handler imports image files through the same active-board importer',async()=>{const env=setup();env.run(source.slice(source.indexOf("$('choose-images').onclick="),source.indexOf("$('start').onclick=")));let prevented=false;env.nodes.dropzone.ondrop({preventDefault(){prevented=true;},dataTransfer:{files:[image()]}});await new Promise(resolve=>setImmediate(resolve));assert.equal(prevented,true);assert.equal(env.context.saved.boards[0].images.length,1);assert.match(env.state.notifications[0],/1 image added to Runners/);});
