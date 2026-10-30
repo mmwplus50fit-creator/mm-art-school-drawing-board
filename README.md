@@ -14,6 +14,12 @@ Supported imports: JPG, PNG, WebP, GIF and AVIF, up to 20 MB per image. Convert 
 
 Click or tap an image's title beneath its thumbnail to edit it. Titles appear in drawing sessions and are retained in backups. To rename an entire board, open it and choose **Rename**.
 
+## Drawing soundtrack
+
+Paste a YouTube video, livestream or playlist URL into **Drawing soundtrack**, choose **Load player**, then press Play in the YouTube player. Use a specific video/playlist link rather than a channel homepage. A visible player stays in the corner through board navigation, timer starts, pause and reference changes. **Stop music** unloads it while keeping the link; **Clear** also forgets the saved link.
+
+Your last link is remembered on this browser/device, separately from board backups. The player is not loaded automatically on reload. Loading it connects to YouTube's privacy-enhanced embed. YouTube controls availability, ads, embedding restrictions and playback. Use **Open YouTube** if a creator disables embedding. On iPad, tap Play yourself; screen-lock/background playback is not promised. No YouTube Data API key or paid integration is needed.
+
 ## Storage and backups
 
 Images and boards stay in IndexedDB in this browser, on this device, at this site's URL. No images are uploaded to Vercel or committed to GitHub. There is no login, database, automatic Drive import, or cross-device synchronization.
