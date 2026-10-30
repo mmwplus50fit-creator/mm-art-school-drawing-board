@@ -2,3 +2,6 @@
 .dropzone .paste-title { font-size: 14px; font-weight: 600; color: var(--green); margin: 15px 0 10px; }
 .dropzone kbd { font: inherit; font-size: 11px; border: 1px solid #c7cebf; border-bottom-width: 2px; padding: 2px 5px; border-radius: 4px; background: #fafbf6; color: var(--ink); white-space: nowrap; }
 .dropzone #paste-help { line-height: 2; }
+.image-meta .reference-title { flex: 1; min-width: 0; margin: 0; padding: 6px 3px; border: 0; font-size: 11px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: underline; text-decoration-color: #bcc4b4; text-underline-offset: 3px; }
+.image-meta .reference-title:hover { color: var(--green); }
+.title-hint { font-size: 12px; line-height: 1.6; color: var(--muted); }

@@ -10,6 +10,8 @@ On an open board, paste a copied image with **Ctrl+V** (or **⌘+V**). For Windo
 
 Supported imports: JPG, PNG, WebP, GIF and AVIF, up to 20 MB per image. Convert HEIC to JPG or PNG before importing. References are displayed uncropped in drawing sessions.
 
+Click or tap an image's title beneath its thumbnail to edit it. Titles appear in drawing sessions and are retained in backups. To rename an entire board, open it and choose **Rename**.
+
 ## Storage and backups
 
 Images and boards stay in IndexedDB in this browser, on this device, at this site's URL. No images are uploaded to Vercel or committed to GitHub. There is no login, database, automatic Drive import, or cross-device synchronization.
