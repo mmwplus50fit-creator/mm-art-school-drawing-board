@@ -29,11 +29,12 @@ function initializeSoundtrack(){
   event.preventDefault();let source;try{source=youtubeSoundtrack(input.value);}catch(err){message.textContent=err.message;input.focus();return;}
   if(loaded===source.embed){message.textContent='Your player is already loaded. Press Play in YouTube to listen.';return;}
   const frame=document.createElement('iframe');frame.title='Drawing soundtrack — YouTube player';frame.width='320';frame.height='200';frame.src=source.embed;frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';
-  holder.replaceChildren(frame);loaded=source.embed;dock.hidden=false;document.body.classList.add('has-soundtrack');open.href=source.watch;
+  holder.replaceChildren(frame);loaded=source.embed;dock.hidden=false;open.href=source.watch;
   message.textContent='Press Play in the YouTube player. Music continues as your drawing references change. If embedding is unavailable, choose Open YouTube.';
+  dock.scrollIntoView({block:'nearest'});
   try{localStorage.setItem(key,input.value.trim());}catch{message.textContent+=' This browser could not remember the link.';}
  });
- document.getElementById('soundtrack-stop').addEventListener('click',()=>{holder.replaceChildren();loaded='';dock.hidden=true;document.body.classList.remove('has-soundtrack');message.textContent='Soundtrack stopped. Your link is kept for next time.';});
+ document.getElementById('soundtrack-stop').addEventListener('click',()=>{holder.replaceChildren();loaded='';dock.hidden=true;message.textContent='Soundtrack stopped. Your link is kept for next time.';});
  document.getElementById('soundtrack-clear').addEventListener('click',()=>{document.getElementById('soundtrack-stop').click();input.value='';try{localStorage.removeItem(key);}catch{}message.textContent='Soundtrack and saved link cleared.';});
 }
 if(typeof module!=='undefined')module.exports={youtubeSoundtrack};

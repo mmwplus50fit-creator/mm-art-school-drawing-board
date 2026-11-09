@@ -74,21 +74,97 @@ function handleImagePaste(event) {
 }
 document.addEventListener('paste',handleImagePaste);
 function shuffle(items){for(let i=items.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}return items;}
-function startSession(){if(busy)return notify('Please wait for your images to finish saving.');const board=currentBoard();let plan;try{plan=readPlan();}catch(err){return notify(err.message);}running={images:practiceSequence(board.images,plan.count,$('shuffle').checked),durations:plan.durations,index:0,paused:false};$('session-board').textContent=board.name;releaseUrls();show('session');loadRound();clearInterval(interval);interval=setInterval(tick,200);}function loadRound(){if(sessionUrl)URL.revokeObjectURL(sessionUrl);const img=running.images[running.index];sessionUrl=URL.createObjectURL(img.blob);$('reference').src=sessionUrl;$('reference').alt=img.name;$('reference-name').textContent=img.name;$('round-label').textContent='Round '+(running.index+1)+' of '+running.images.length;running.duration=running.durations[running.index];running.remaining=running.duration;running.deadline=performance.now()+running.duration;$('pause').textContent=running.paused?'Resume':'Pause';drawClock();}
-function drawClock(){const seconds=Math.ceil(running.remaining/1000);$('countdown').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');$('clock-progress').style.strokeDashoffset=578.053*(1-Math.max(0,running.remaining/running.duration));document.title=$('countdown').textContent+' · The Drawing Board';}
+let roundAudio;
+function prepareRoundSound() {
+ const AudioContext = window.AudioContext || window.webkitAudioContext;
+ if (!AudioContext) return;
+ try {
+  roundAudio ??= new AudioContext();
+  if (roundAudio.state !== 'running') roundAudio.resume().catch(() => {});
+ } catch {
+  // The visual timer still works when audio is unavailable.
+ }
+}
+
+function playRoundSound() {
+ if (!$('round-sound').checked || roundAudio?.state !== 'running') return;
+ const tone = roundAudio.createOscillator();
+ const envelope = roundAudio.createGain();
+ const now = roundAudio.currentTime;
+ tone.frequency.value = 523.25;
+ envelope.gain.setValueAtTime(.001, now);
+ envelope.gain.exponentialRampToValueAtTime(.08, now + .025);
+ envelope.gain.exponentialRampToValueAtTime(.001, now + .22);
+ tone.connect(envelope).connect(roundAudio.destination);
+ tone.start(now);
+ tone.stop(now + .23);
+}
+
+function setDrawingFocus(active) {
+ document.body.classList.toggle('drawing-focused', active);
+ $('fullscreen').textContent = active ? 'Exit fullscreen' : '⛶ Fullscreen';
+ document.querySelector('header').inert = active;
+ document.querySelector('.soundtrack-panel').inert = active;
+ if (active) $('drawing-workspace').scrollTop = 0;
+}
+
+function startSession(){if(busy)return notify('Please wait for your images to finish saving.');const board=currentBoard();let plan;try{plan=readPlan();}catch(err){return notify(err.message);}running={images:practiceSequence(board.images,plan.count,$('shuffle').checked),durations:plan.durations,index:0,paused:false};$('session-board').textContent=board.name;releaseUrls();show('session');loadRound();
+ const top = document.querySelector('.session-top');
+ top.focus({preventScroll:true});
+ top.scrollIntoView({block:'start'});
+ if ($('round-sound').checked) prepareRoundSound();
+ clearInterval(interval);interval=setInterval(tick,200);}function loadRound(){if(sessionUrl)URL.revokeObjectURL(sessionUrl);const img=running.images[running.index];sessionUrl=URL.createObjectURL(img.blob);$('reference').src=sessionUrl;$('reference').alt=img.name;$('reference-name').textContent=img.name;$('round-label').textContent='Round '+(running.index+1)+' of '+running.images.length;running.duration=running.durations[running.index];running.remaining=running.duration;running.deadline=performance.now()+running.duration;$('pause').textContent=running.paused?'Resume':'Pause';drawClock();}
+function drawClock(){const seconds=Math.ceil(running.remaining/1000);$('countdown').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');const fraction = running.remaining / running.duration;
+ const ring = $('clock-progress');
+ ring.style.strokeDashoffset = 578.053 * (1 - fraction);
+ ring.dataset.phase = fraction <= .15 ? 'red' : fraction <= .4 ? 'amber' : 'green';
+ document.title=$('countdown').textContent+' · The Drawing Board';}
 function tick(){if(!running||running.paused)return;running.remaining=Math.max(0,running.deadline-performance.now());drawClock();if(running.remaining<=0)nextRound();}
-function nextRound(){if(!running)return;if(running.index+1>=running.images.length){endSession();notify('Session complete. A little practice, a little progress.');}else{running.index++;loadRound();}}
-function endSession(){clearInterval(interval);running=null;if(sessionUrl)URL.revokeObjectURL(sessionUrl);sessionUrl=null;$('reference').removeAttribute('src');document.title='The Drawing Board · MM | Art School';if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});openBoard(selected);}
+function nextRound(){if(!running)return;if(running.index+1>=running.images.length){endSession();notify('Session complete. A little practice, a little progress.');}else{running.index++;loadRound();playRoundSound();}}
+function endSession(){clearInterval(interval);running=null;if(sessionUrl)URL.revokeObjectURL(sessionUrl);sessionUrl=null;$('reference').removeAttribute('src');document.title='The Drawing Board · MM | Art School';setDrawingFocus(false);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});openBoard(selected);}
 function blobData(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
 async function exportBackup(){if(busy)return notify('Please wait for the current save to finish.');busy=true;try{const boards=[];for(const b of library.boards){const images=[];for(const image of b.images)images.push({name:image.name,data:await blobData(image.blob)});boards.push({name:b.name,images});}const backup={format:'mm-drawing-board',version:1,exportedAt:new Date().toISOString(),boards};const blob=new Blob([JSON.stringify(backup)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='drawing-board-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);notify('Backup exported. Keep the downloaded file somewhere safe.');}catch(err){notify('Backup could not be exported: '+err.message);}finally{busy=false;}}
 async function importBackup(file){if(!file)return;if(busy)return notify('Please wait for the current save to finish.');if(file.size>200*1024*1024)return notify('This backup is too large. The import limit is 200 MB.');busy=true;try{const backup=JSON.parse(await file.text());if(backup.format!=='mm-drawing-board'||backup.version!==1||!Array.isArray(backup.boards)||backup.boards.length>100)throw new Error('This is not a supported Drawing Board backup.');const boards=[];for(const b of backup.boards){if(typeof b.name!=='string'||!b.name.trim()||b.name.length>80||!Array.isArray(b.images)||b.images.length>2000)throw new Error('Invalid board data.');const images=[];for(const img of b.images){if(typeof img.name!=='string'||typeof img.data!=='string')throw new Error('Invalid image data.');const match=img.data.match(/^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/]*={0,2})$/);if(!match||match[2].length>28*1024*1024)throw new Error('Unsupported image in backup.');const raw=atob(match[2]);if(raw.length>20*1024*1024)throw new Error('Image exceeds 20 MB.');const blob=new Blob([Uint8Array.from(raw,c=>c.charCodeAt(0))],{type:match[1]});const bitmap=await createImageBitmap(blob);bitmap.close();images.push({id:uid(),name:img.name.slice(0,255),blob});}boards.push({id:uid(),name:b.name,images});}const next=structuredClone(library);next.boards.push(...boards);await persist(next);renderLibrary();notify(boards.length+' board(s) restored as new copies. Existing boards were kept.');}catch(err){notify('Import cancelled. '+err.message+' Your existing boards were kept.');}finally{busy=false;$('backup-input').value='';}}
 $('new-board').onclick=()=>nameBoard();$('back-library').onclick=renderLibrary;$('rename-board').onclick=()=>nameBoard(true);$('delete-board').onclick=async()=>{if(await confirmDelete('Delete this board?','All references in this board will be removed from this browser. Export a backup first if you want to keep them.')){if(await mutate(next=>{next.boards=next.boards.filter(b=>b.id!==selected);}))renderLibrary();}};
 $('choose-images').onclick=()=>$('file-input').click();$('file-input').onchange=e=>addImages([...e.target.files]);const drop=$('dropzone');drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragging');};drop.ondragleave=()=>drop.classList.remove('dragging');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragging');addImages([...e.dataTransfer.files]);};window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
-$('start').onclick=startSession;$('skip').onclick=nextRound;$('end-session').onclick=endSession;$('pause').onclick=()=>{if(!running)return;if(running.paused){running.deadline=performance.now()+running.remaining;running.paused=false;}else{running.remaining=Math.max(0,running.deadline-performance.now());running.paused=true;}drawClock();$('pause').textContent=running.paused?'Resume':'Pause';};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else notify('Fullscreen is not available in this browser.');}catch{notify('Fullscreen is not available in this browser.');}};
+$('start').onclick=startSession;$('skip').onclick=nextRound;$('end-session').onclick=endSession;$('pause').onclick=()=>{if(!running)return;if(running.paused){running.deadline=performance.now()+running.remaining;running.paused=false;}else{running.remaining=Math.max(0,running.deadline-performance.now());running.paused=true;}drawClock();$('pause').textContent=running.paused?'Resume':'Pause';};$('fullscreen').onclick = async () => {
+ const root = document.documentElement;
+ if (document.body.classList.contains('drawing-focused')) {
+  setDrawingFocus(false);
+  if (document.fullscreenElement === root) await document.exitFullscreen();
+  $('session').scrollIntoView({block:'start'});
+  return;
+ }
+ setDrawingFocus(true);
+ try {
+  await root.requestFullscreen?.();
+ } catch {
+  // Keep the viewport-sized workspace on browsers without page fullscreen.
+ }
+ if (!running && document.fullscreenElement === root) await document.exitFullscreen();
+};
+let nativeDrawingFullscreen = false;
+document.addEventListener('fullscreenchange', () => {
+ if (document.fullscreenElement === document.documentElement) nativeDrawingFullscreen = true;
+ if (!document.fullscreenElement && nativeDrawingFullscreen) {
+  nativeDrawingFullscreen = false;
+  setDrawingFocus(false);
+  if (running) $('session').scrollIntoView({block:'start'});
+ }
+});
+$('round-sound').onchange = () => {
+ if ($('round-sound').checked) prepareRoundSound();
+};
+
 $('backup').onclick=exportBackup;$('restore').onclick=()=>$('backup-input').click();$('backup-input').onchange=e=>importBackup(e.target.files[0]);
 $('image-title').oninput=()=> $('image-title').setCustomValidity('');
 $('plan-mode').onchange=()=>{if($('plan-mode').value!=='time'&&!manualRoundCount)$('rounds').value=currentBoard().images.length||1;updatePlanner();};
 $('duration').oninput=updatePlanner;$('total-minutes').oninput=updatePlanner;$('rounds').oninput=()=>{manualRoundCount=true;updatePlanner();};
 $('title-form').onsubmit=event=>{if(event.submitter?.value==='save'&&!$('image-title').value.trim()){event.preventDefault();$('image-title').setCustomValidity('Please enter a reference title.');$('image-title').reportValidity();}};
-document.addEventListener('keydown',e=>{if(running&&e.code==='Space'&&!['INPUT','SELECT','BUTTON'].includes(document.activeElement.tagName)){e.preventDefault();$('pause').click();}});
+document.addEventListener('keydown',e=>{
+ if (e.key === 'Escape' && !document.fullscreenElement && document.body.classList.contains('drawing-focused')) {
+  $('fullscreen').click();
+  $('fullscreen').focus({preventScroll:true});
+ }
+ if(running&&e.code==='Space'&&!['INPUT','SELECT','BUTTON'].includes(document.activeElement.tagName)){e.preventDefault();$('pause').click();}});
 (async()=>{try{db=await openDatabase();db.onversionchange=()=>{db.close();notify('The library changed in another tab. Reload to continue.');};library=await readLibrary();if(!library){library={version:1,boards:[{id:uid(),name:'Runners',images:[]}]};await persist(library);}renderLibrary();}catch(err){document.querySelectorAll('button').forEach(b=>b.disabled=true);notify('Browser storage is unavailable. Open this site in a regular browser window with storage enabled, then reload.');}})();
