@@ -42,18 +42,43 @@
   aspect-ratio: 16 / 9;
   border: 0;
 }
+#session[hidden] + .session-side .session-sidebar {
+  display: none;
+}
+.session-side {
+  min-width: 0;
+  align-self: center;
+}
+#session:not([hidden]) + .session-side:has(.soundtrack-dock:not([hidden])) .session-sidebar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 480px);
+  margin: 12px auto 0;
+}
 @media (min-width: 760px) {
-  #drawing-workspace:has(#session:not([hidden]) + .soundtrack-dock:not([hidden])) {
-    grid-template-columns: minmax(0, 1fr) clamp(270px, 28vw, 480px);
+  #drawing-workspace:has(:where(#session:not([hidden]))) {
+    grid-template-columns: minmax(0, 1.3fr) minmax(250px, 1fr);
+    gap: 6%;
   }
-  #session:not([hidden]) + .soundtrack-dock {
-    align-self: center;
+  #drawing-workspace:has(:where(#session:not([hidden]))):has(.soundtrack-dock:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) clamp(270px, 28vw, 480px);
+    gap: 12px;
+  }
+  .drawing-focused #drawing-workspace:has(:where(#session:not([hidden]))):not(:has(.soundtrack-dock:not([hidden]))) {
+    grid-template-columns: minmax(0, 1fr) 106px;
+    gap: 8px;
   }
 }
 @media (max-width: 759px) {
-  #session:has(+ .soundtrack-dock:not([hidden])) .reference-frame {
+  #drawing-workspace:has(.soundtrack-dock:not([hidden])) .reference-frame {
     height: 46dvh;
     min-height: 180px;
+  }
+  .drawing-focused #drawing-workspace:not(:has(.soundtrack-dock:not([hidden]))) {
+    grid-template-columns: minmax(0, 1fr) 106px;
+    gap: 8px;
   }
 }
 @media (max-width: 600px) {
