@@ -4,10 +4,10 @@ const acceptedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/g
 let db, library, selected, running, interval, busy = false;
 let urls = [], sessionUrl, noticeTimeout;
 let plannerBoard, manualRoundCount=false;
-function formatPracticeTime(ms){const seconds=Math.round(ms/1000);return seconds>=60?Math.floor(seconds/60)+' min'+(seconds%60?' '+seconds%60+' sec':''):seconds+' sec';}
+function formatPracticeTime(ms){const seconds=Number((ms/1000).toFixed(1));return seconds>=60?Math.floor(seconds/60)+' min'+(seconds%60?' '+Number((seconds%60).toFixed(1))+' sec':''):seconds+' sec';}
 function readPlan(){return planPractice({mode:$('plan-mode').value,rounds:Number($('rounds').value),seconds:Number($('duration').value),minutes:Number($('total-minutes').value),imageCount:currentBoard()?.images.length||0});}
 function syncPlanner(board){if(plannerBoard!==board.id){plannerBoard=board.id;manualRoundCount=false;$('plan-mode').value='count';}if(!manualRoundCount)$('rounds').value=board.images.length||1;updatePlanner();}
-function updatePlanner(){const mode=$('plan-mode').value;$('total-field').hidden=mode==='count';$('duration').disabled=mode==='fit';$('rounds').disabled=mode==='time';try{const plan=readPlan();if(mode==='time')$('rounds').value=plan.count;const each=plan.durations[0];if(mode==='fit')$('duration').value=each/1000;let summary=plan.count+' round'+(plan.count===1?'':'s')+' · '+formatPracticeTime(plan.totalMs)+' of drawing · '+formatPracticeTime(each)+' per reference.';if(plan.durations.at(-1)!==each)summary+=' Final round: '+formatPracticeTime(plan.durations.at(-1))+'.';summary+=' '+plan.uniqueCount+' unique image'+(plan.uniqueCount===1?'':'s')+'.';if(plan.repeats)summary+=' Images cycle after each full pass ('+plan.repeats+' repeated round'+(plan.repeats===1?'':'s')+').';if(plan.uniqueCount===1&&plan.count>1)summary+=' With one image, consecutive repeats are unavoidable.';$('plan-summary').textContent=summary;$('start').disabled=false;}catch(err){$('plan-summary').textContent=err.message;$('start').disabled=true;}}
+function updatePlanner(){const mode=$('plan-mode').value;$('total-field').hidden=mode==='count';$('duration').disabled=mode==='fit';$('rounds').disabled=mode==='time';try{const plan=readPlan();if(mode==='time')$('rounds').value=plan.count;const each=plan.durations[0];if(mode==='fit')$('duration').value=(each/1000).toFixed(1);let summary=plan.count+' round'+(plan.count===1?'':'s')+' · '+formatPracticeTime(plan.totalMs)+' of drawing · '+formatPracticeTime(each)+' per reference.';if(plan.durations.at(-1)!==each)summary+=' Final round: '+formatPracticeTime(plan.durations.at(-1))+'.';summary+=' '+plan.uniqueCount+' unique image'+(plan.uniqueCount===1?'':'s')+'.';if(plan.repeats)summary+=' Images cycle after each full pass ('+plan.repeats+' repeated round'+(plan.repeats===1?'':'s')+').';if(plan.uniqueCount===1&&plan.count>1)summary+=' With one image, consecutive repeats are unavoidable.';$('plan-summary').textContent=summary;$('start').disabled=false;}catch(err){$('plan-summary').textContent=err.message;$('start').disabled=true;}}
 const uid = () => crypto.randomUUID();
 function notify(message) { $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(noticeTimeout); noticeTimeout = setTimeout(() => $('toast').classList.remove('visible'), 6500); }
 function show(view) { ['library','board-view','session'].forEach(id => $(id).hidden = id !== view); window.scrollTo(0,0); }
@@ -24,7 +24,41 @@ function renderLibrary() {
  library.boards.forEach((board,i) => { const card = document.createElement('button'); card.className='board-card'; const cover=document.createElement('div'); cover.className='board-cover'; if(board.images.length){const img=document.createElement('img');img.src=imageUrl(board.images[0].blob);img.alt='';cover.append(img);}else{cover.innerHTML=runnerArt();} const num=document.createElement('span');num.className='number';num.textContent=String(i+1).padStart(2,'0')+' / COLLECTION';const tag=document.createElement('span');tag.className='tag';tag.textContent=board.images.length?'Ready to practice':'Ready for your references';cover.append(num,tag);const bottom=document.createElement('div');bottom.className='card-bottom';const titleWrap=document.createElement('div');const h=document.createElement('h3');h.textContent=board.name;const p=document.createElement('p');p.textContent=board.images.length+' reference'+(board.images.length===1?'':'s');titleWrap.append(h,p);const arrow=document.createElement('span');arrow.textContent='↗';bottom.append(titleWrap,arrow);card.append(cover,bottom);card.onclick=()=>openBoard(board.id);root.append(card); });
  const add=document.createElement('button');add.className='new-card';add.innerHTML='<span>＋</span> A new way of seeing';add.onclick=()=>nameBoard();root.append(add); show('library');
 }
-function openBoard(id) { selected=id; const board=currentBoard(); if(!board)return renderLibrary(); releaseUrls(); $('board-title').textContent=board.name;$('image-count').textContent=board.images.length+' reference'+(board.images.length===1?'':'s')+' · Your next drawing starts here.';$('start').disabled=!board.images.length;syncPlanner(board);const root=$('images');root.replaceChildren();board.images.forEach(image=>{const card=document.createElement('div');card.className='image-card';const img=document.createElement('img');img.src=imageUrl(image.blob);img.alt=image.name;img.loading='lazy';const meta=document.createElement('div');meta.className='image-meta';const label=document.createElement('button');label.className='reference-title';label.textContent=image.name;label.title='Edit title: '+image.name;label.setAttribute('aria-label','Edit title: '+image.name);label.onclick=()=>editImageTitle(id,image.id);const remove=document.createElement('button');remove.textContent='×';remove.setAttribute('aria-label','Remove '+image.name);remove.onclick=async()=>{if(await confirmDelete('Remove this reference?','It will be removed from this board. Your original file stays in Drive.')){if(await mutate(next=>{next.boards.find(b=>b.id===id).images=next.boards.find(b=>b.id===id).images.filter(x=>x.id!==image.id);}))openBoard(id);}};meta.append(label,remove);card.append(img,meta);root.append(card);});show('board-view'); }
+function openBoard(id) { selected=id; const board=currentBoard(); if(!board)return renderLibrary(); releaseUrls(); $('board-title').textContent=board.name;$('image-count').textContent=board.images.length+' reference'+(board.images.length===1?'':'s')+' · Your next drawing starts here.';$('start').disabled=!board.images.length;syncPlanner(board);const root=$('images');root.replaceChildren();board.images.forEach(image=>{const card=document.createElement('div');card.className='image-card';const img=document.createElement('img');img.src=imageUrl(image.blob);img.alt=image.name;img.loading='lazy';const meta=document.createElement('div');meta.className='image-meta';const label=document.createElement('button');label.className='reference-title';label.textContent=image.name;label.title='Edit title: '+image.name;label.setAttribute('aria-label','Edit title: '+image.name);label.onclick=()=>editImageTitle(id,image.id);const remove=document.createElement('button');remove.textContent='×';remove.setAttribute('aria-label','Remove '+image.name);remove.onclick=async()=>{if(await confirmDelete('Remove this reference?','It will be removed from this board. Your original file stays in Drive.')){if(await mutate(next=>{next.boards.find(b=>b.id===id).images=next.boards.find(b=>b.id===id).images.filter(x=>x.id!==image.id);}))openBoard(id);}};meta.append(label,remove);card.append(img,meta);root.append(card);});renderStories(board);show('board-view'); }
+function renderStories(board) {
+ const list = $('stories-list');
+ list.replaceChildren();
+ for (const image of board.images.filter(image => image.stories?.length)) {
+  const item = document.createElement('li');
+  const button = document.createElement('button');
+  button.textContent = image.name;
+  button.onclick = () => {
+   $('story-title').textContent = image.name;
+   $('story-image').src = URL.createObjectURL(image.blob);
+   $('story-image').alt = image.name;
+   const entries = $('story-entries');
+   entries.replaceChildren();
+   for (const story of image.stories) {
+    const entry = document.createElement('article');
+    const date = document.createElement('h3');
+    date.textContent = story.date + ' · Round ' + story.round + ' · ' + story.title;
+    const words = document.createElement('p');
+    words.textContent = story.text;
+    entry.append(date, words);
+    entries.append(entry);
+   }
+   $('story-dialog').showModal();
+  };
+  item.append(button);
+  list.append(item);
+ }
+ $('stories-section').hidden = !list.childElementCount;
+}
+$('story-dialog').onclose = () => {
+ URL.revokeObjectURL($('story-image').src);
+ $('story-image').removeAttribute('src');
+};
+
 async function nameBoard(rename=false) { const dlg=$('name-dialog');$('dialog-title').textContent=rename?'A new name.':'A new board.';$('board-name').value=rename?currentBoard().name:'';dlg.showModal();$('board-name').focus();dlg.onclose=async()=>{if(dlg.returnValue!=='save')return;const name=$('board-name').value.trim();if(!name)return notify('Please give your board a name.');if(await mutate(next=>{if(rename)next.boards.find(b=>b.id===selected).name=name;else next.boards.push({id:uid(),name,images:[]});})){if(rename)openBoard(selected);else renderLibrary();}}; }
 function editImageTitle(boardId,imageId) {
  if(busy)return notify('Please wait for the current save to finish.');
@@ -108,26 +142,86 @@ function setDrawingFocus(active) {
  if (active) $('drawing-workspace').scrollTop = 0;
 }
 
-function startSession(){if(busy)return notify('Please wait for your images to finish saving.');const board=currentBoard();let plan;try{plan=readPlan();}catch(err){return notify(err.message);}running={images:practiceSequence(board.images,plan.count,$('shuffle').checked),durations:plan.durations,index:0,paused:false};$('session-board').textContent=board.name;releaseUrls();show('session');loadRound();
+function startSession(){if(busy)return notify('Please wait for your images to finish saving.');const board=currentBoard();let plan;try{plan=readPlan();}catch(err){return notify(err.message);}running={images:practiceSequence(board.images,plan.count,$('shuffle').checked),durations:plan.durations,index:0,paused:false,words:$('enable-words').checked,writingMs:Number($('words-duration').value)*1000,date:new Date().toLocaleDateString('en-CA')};
+ $('disable-words').hidden = !running.words;$('session-board').textContent=board.name;releaseUrls();show('session');loadRound();
  const top = document.querySelector('.session-top');
  top.focus({preventScroll:true});
  top.scrollIntoView({block:'start'});
  if ($('round-sound').checked) prepareRoundSound();
- clearInterval(interval);interval=setInterval(tick,200);}function loadRound(){if(sessionUrl)URL.revokeObjectURL(sessionUrl);const img=running.images[running.index];sessionUrl=URL.createObjectURL(img.blob);$('reference').src=sessionUrl;$('reference').alt=img.name;$('reference-name').textContent=img.name;$('round-label').textContent='Round '+(running.index+1)+' of '+running.images.length;running.duration=running.durations[running.index];running.remaining=running.duration;running.deadline=performance.now()+running.duration;$('pause').textContent=running.paused?'Resume':'Pause';drawClock();}
+ clearInterval(interval);interval=setInterval(tick,200);}function loadRound(){
+ setWriting(false);if(sessionUrl)URL.revokeObjectURL(sessionUrl);const img=running.images[running.index];sessionUrl=URL.createObjectURL(img.blob);$('reference').src=sessionUrl;$('reference').alt=img.name;$('reference-name').textContent=img.name;$('round-label').textContent='Round '+(running.index+1)+' of '+running.images.length;running.duration=running.durations[running.index];running.remaining=running.duration;running.deadline=performance.now()+running.duration;$('pause').textContent=running.paused?'Resume':'Pause';drawClock();}
 function drawClock(){const seconds=Math.ceil(running.remaining/1000);$('countdown').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');const fraction = running.remaining / running.duration;
  const ring = $('clock-progress');
  ring.style.strokeDashoffset = 578.053 * (1 - fraction);
  ring.dataset.phase = fraction <= .15 ? 'red' : fraction <= .4 ? 'amber' : 'green';
  document.title=$('countdown').textContent+' · The Drawing Board';}
-function tick(){if(!running||running.paused)return;running.remaining=Math.max(0,running.deadline-performance.now());drawClock();if(running.remaining<=0)nextRound();}
+function tick(){if(!running||running.paused||running.saving)return;running.remaining=Math.max(0,running.deadline-performance.now());drawClock();if(running.remaining<=0)finishPhase();}
+function setWriting(active) {
+ running.writing = active;
+ $('words-panel').hidden = !active;
+ $('words-phase').hidden = !active;
+ $('skip').textContent = active ? 'Next reference' : 'Next →';
+ if (active) $('words-text').value = '';
+}
+
+async function saveWriting() {
+ const text = $('words-text').value.trim();
+ if (!text) return true;
+ const image = running.images[running.index];
+ const story = {date:running.date, round:running.index+1, title:image.name, text};
+ return mutate(next => {
+  const reference = next.boards.find(board => board.id === selected)?.images.find(item => item.id === image.id);
+  if (!reference) throw new Error('The reference is unavailable.');
+  (reference.stories ??= []).push(story);
+ });
+}
+
+async function finishPhase({optOut = false, end = false} = {}) {
+ if (!running || running.saving) return;
+ if (running.writing) {
+  running.saving = true;
+  $('words-text').readOnly = true;
+  const saved = await saveWriting();
+  $('words-text').readOnly = false;
+  running.saving = false;
+  if (!saved) {
+   running.remaining = Math.max(0, running.deadline - performance.now());
+   running.paused = true;
+   $('pause').textContent = 'Resume';
+   drawClock();
+   return;
+  }
+ }
+ if (optOut) {
+  running.words = false;
+  $('disable-words').hidden = true;
+  if (!running.writing) return;
+ }
+ if (end) return endSession();
+ if (!running.words || running.writing) return nextRound();
+ setWriting(true);
+ running.duration = running.writingMs;
+ running.remaining = running.duration;
+ running.deadline = performance.now() + running.duration;
+ drawClock();
+ $('words-panel').scrollIntoView({block:'nearest'});
+}
+
 function nextRound(){if(!running)return;if(running.index+1>=running.images.length){endSession();notify('Session complete. A little practice, a little progress.');}else{running.index++;loadRound();playRoundSound();}}
-function endSession(){clearInterval(interval);running=null;if(sessionUrl)URL.revokeObjectURL(sessionUrl);sessionUrl=null;$('reference').removeAttribute('src');document.title='The Drawing Board · MM | Art School';setDrawingFocus(false);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});openBoard(selected);}
+function endSession(){clearInterval(interval);setWriting(false);running=null;if(sessionUrl)URL.revokeObjectURL(sessionUrl);sessionUrl=null;$('reference').removeAttribute('src');document.title='The Drawing Board · MM | Art School';setDrawingFocus(false);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});openBoard(selected);}
 function blobData(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
-async function exportBackup(){if(busy)return notify('Please wait for the current save to finish.');busy=true;try{const boards=[];for(const b of library.boards){const images=[];for(const image of b.images)images.push({name:image.name,data:await blobData(image.blob)});boards.push({name:b.name,images});}const backup={format:'mm-drawing-board',version:1,exportedAt:new Date().toISOString(),boards};const blob=new Blob([JSON.stringify(backup)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='drawing-board-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);notify('Backup exported. Keep the downloaded file somewhere safe.');}catch(err){notify('Backup could not be exported: '+err.message);}finally{busy=false;}}
-async function importBackup(file){if(!file)return;if(busy)return notify('Please wait for the current save to finish.');if(file.size>200*1024*1024)return notify('This backup is too large. The import limit is 200 MB.');busy=true;try{const backup=JSON.parse(await file.text());if(backup.format!=='mm-drawing-board'||backup.version!==1||!Array.isArray(backup.boards)||backup.boards.length>100)throw new Error('This is not a supported Drawing Board backup.');const boards=[];for(const b of backup.boards){if(typeof b.name!=='string'||!b.name.trim()||b.name.length>80||!Array.isArray(b.images)||b.images.length>2000)throw new Error('Invalid board data.');const images=[];for(const img of b.images){if(typeof img.name!=='string'||typeof img.data!=='string')throw new Error('Invalid image data.');const match=img.data.match(/^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/]*={0,2})$/);if(!match||match[2].length>28*1024*1024)throw new Error('Unsupported image in backup.');const raw=atob(match[2]);if(raw.length>20*1024*1024)throw new Error('Image exceeds 20 MB.');const blob=new Blob([Uint8Array.from(raw,c=>c.charCodeAt(0))],{type:match[1]});const bitmap=await createImageBitmap(blob);bitmap.close();images.push({id:uid(),name:img.name.slice(0,255),blob});}boards.push({id:uid(),name:b.name,images});}const next=structuredClone(library);next.boards.push(...boards);await persist(next);renderLibrary();notify(boards.length+' board(s) restored as new copies. Existing boards were kept.');}catch(err){notify('Import cancelled. '+err.message+' Your existing boards were kept.');}finally{busy=false;$('backup-input').value='';}}
+async function exportBackup(){if(busy)return notify('Please wait for the current save to finish.');busy=true;try{const boards=[];for(const b of library.boards){const images=[];for(const image of b.images)images.push({name:image.name,data:await blobData(image.blob),stories:image.stories});boards.push({name:b.name,images});}const backup={format:'mm-drawing-board',version:1,exportedAt:new Date().toISOString(),boards};const blob=new Blob([JSON.stringify(backup)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='drawing-board-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);notify('Backup exported. Keep the downloaded file somewhere safe.');}catch(err){notify('Backup could not be exported: '+err.message);}finally{busy=false;}}
+async function importBackup(file){if(!file)return;if(busy)return notify('Please wait for the current save to finish.');if(file.size>200*1024*1024)return notify('This backup is too large. The import limit is 200 MB.');busy=true;try{const backup=JSON.parse(await file.text());if(backup.format!=='mm-drawing-board'||backup.version!==1||!Array.isArray(backup.boards)||backup.boards.length>100)throw new Error('This is not a supported Drawing Board backup.');const boards=[];for(const b of backup.boards){if(typeof b.name!=='string'||!b.name.trim()||b.name.length>80||!Array.isArray(b.images)||b.images.length>2000)throw new Error('Invalid board data.');const images=[];for(const img of b.images){if(typeof img.name!=='string'||typeof img.data!=='string')throw new Error('Invalid image data.');const match=img.data.match(/^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/]*={0,2})$/);if(!match||match[2].length>28*1024*1024)throw new Error('Unsupported image in backup.');const raw=atob(match[2]);if(raw.length>20*1024*1024)throw new Error('Image exceeds 20 MB.');const blob=new Blob([Uint8Array.from(raw,c=>c.charCodeAt(0))],{type:match[1]});const bitmap=await createImageBitmap(blob);bitmap.close();const stories = img.stories ?? [];
+if(!Array.isArray(stories)||stories.some(story=>!story||typeof story.text!=='string'||story.text.length>10000||typeof story.title!=='string'||story.title.length>255||typeof story.date!=='string'||story.date.length>32||!Number.isInteger(story.round)||story.round<1))throw new Error('Invalid story data.');
+images.push({id:uid(),name:img.name.slice(0,255),blob,stories});}boards.push({id:uid(),name:b.name,images});}const next=structuredClone(library);next.boards.push(...boards);await persist(next);renderLibrary();notify(boards.length+' board(s) restored as new copies. Existing boards were kept.');}catch(err){notify('Import cancelled. '+err.message+' Your existing boards were kept.');}finally{busy=false;$('backup-input').value='';}}
 $('new-board').onclick=()=>nameBoard();$('back-library').onclick=renderLibrary;$('rename-board').onclick=()=>nameBoard(true);$('delete-board').onclick=async()=>{if(await confirmDelete('Delete this board?','All references in this board will be removed from this browser. Export a backup first if you want to keep them.')){if(await mutate(next=>{next.boards=next.boards.filter(b=>b.id!==selected);}))renderLibrary();}};
 $('choose-images').onclick=()=>$('file-input').click();$('file-input').onchange=e=>addImages([...e.target.files]);const drop=$('dropzone');drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragging');};drop.ondragleave=()=>drop.classList.remove('dragging');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragging');addImages([...e.dataTransfer.files]);};window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
-$('start').onclick=startSession;$('skip').onclick=nextRound;$('end-session').onclick=endSession;$('pause').onclick=()=>{if(!running)return;if(running.paused){running.deadline=performance.now()+running.remaining;running.paused=false;}else{running.remaining=Math.max(0,running.deadline-performance.now());running.paused=true;}drawClock();$('pause').textContent=running.paused?'Resume':'Pause';};$('fullscreen').onclick = async () => {
+$('start').onclick=startSession;$('skip').onclick=()=>finishPhase();
+$('save-words').onclick=()=>finishPhase();
+$('disable-words').onclick=()=>finishPhase({optOut:true});
+$('end-session').onclick=()=>finishPhase({end:true});
+$('enable-words').onchange=()=>{$('words-duration-field').hidden=!$('enable-words').checked;};
+$('pause').onclick=()=>{if(!running||running.saving)return;if(running.paused){running.deadline=performance.now()+running.remaining;running.paused=false;}else{running.remaining=Math.max(0,running.deadline-performance.now());running.paused=true;}drawClock();$('pause').textContent=running.paused?'Resume':'Pause';};$('fullscreen').onclick = async () => {
  const root = document.documentElement;
  if (document.body.classList.contains('drawing-focused')) {
   setDrawingFocus(false);
@@ -166,5 +260,5 @@ document.addEventListener('keydown',e=>{
   $('fullscreen').click();
   $('fullscreen').focus({preventScroll:true});
  }
- if(running&&e.code==='Space'&&!['INPUT','SELECT','BUTTON'].includes(document.activeElement.tagName)){e.preventDefault();$('pause').click();}});
+ if(running&&e.code==='Space'&&!['INPUT','SELECT','BUTTON','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();$('pause').click();}});
 (async()=>{try{db=await openDatabase();db.onversionchange=()=>{db.close();notify('The library changed in another tab. Reload to continue.');};library=await readLibrary();if(!library){library={version:1,boards:[{id:uid(),name:'Runners',images:[]}]};await persist(library);}renderLibrary();}catch(err){document.querySelectorAll('button').forEach(b=>b.disabled=true);notify('Browser storage is unavailable. Open this site in a regular browser window with storage enabled, then reload.');}})();

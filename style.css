@@ -86,3 +86,22 @@ body.drawing-focused #drawing-workspace {
     height: calc(100dvh - 435px);
   }
 }
+
+.words-options { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:12px; }
+.words-options input { margin-right:5px; }
+#words-panel { min-width:0; padding:12px; background:var(--paper); }
+#words-panel label { display:block; font-weight:700; }
+#words-text { display:block; width:100%; min-height:110px; margin:8px 0; padding:10px; font:inherit; resize:vertical; }
+#disable-words { padding:6px; font-size:11px; }
+#words-phase { margin:6px 0; font-weight:700; }
+#stories-section { padding-bottom:24px; }
+#stories-list { display:flex; flex-wrap:wrap; gap:8px; padding:0; list-style:none; }
+#story-dialog { width:min(90vw,720px); }
+#story-image { display:block; max-width:100%; max-height:48vh; margin:auto; }
+#story-entries p { white-space:pre-wrap; overflow-wrap:anywhere; }
+@media (min-width: 900px) {
+  #session .session-body:has(#words-panel:not([hidden])) {
+    grid-template-columns:minmax(0, 3fr) minmax(150px, 2fr);
+    gap:8px;
+  }
+}
