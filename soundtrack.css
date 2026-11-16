@@ -88,3 +88,15 @@
   .soundtrack-form button { flex: 1; padding: 10px; }
   .soundtrack-panel h2 { font-size: 26px; }
 }
+.single-study #drawing-workspace #session + .session-side .session-sidebar { display: none; }
+.single-study #drawing-workspace:not(:has(.soundtrack-dock:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
+.single-study #drawing-workspace .reference-frame[hidden] { display: none; }
+#study-form { padding: 16px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); }
+#study-form label { display: block; font-size: 12px; }
+#study-form :is(select, input, textarea) { display: block; width: 100%; min-width: 0; margin: 5px 0 10px; font: inherit; }
+#study-form [hidden], .single-study.drawing-focused #study-form { display: none; }
+#study-details { border: 0; margin: 12px 0 0; padding: 0; min-width: 0; }
+.study-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
+#study-status { font-size: 12px; }
+#study-status:empty { display: none; }
+.board-actions { flex-wrap: wrap; }
