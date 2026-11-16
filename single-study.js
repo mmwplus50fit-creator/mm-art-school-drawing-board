@@ -1,4 +1,5 @@
 let singleStudy;
+let studyThumbnailUrls = [];
 
 function studyImages(data) {
  return [...data.boards.flatMap(board => board.images), ...(data.studyImages || [])];
@@ -20,26 +21,58 @@ function studyOption(select, value, text) {
  select.append(new Option(text, value));
 }
 
+function clearStudyGallery() {
+ for (const url of studyThumbnailUrls) URL.revokeObjectURL(url);
+ studyThumbnailUrls = [];
+ $('study-gallery').replaceChildren();
+}
+
+function renderStudyGallery() {
+ clearStudyGallery();
+ const picker = $('study-reference');
+ if (!picker.open || !singleStudy) return;
+ const gallery = $('study-gallery');
+ const images = new Map(studyImages(library).map(image => [image.id, image]));
+ const groups = [
+  {name:'Saved studies', entries:(library.studies || []).map(study => ({image:images.get(study.imageId), title:study.title}))},
+  ...library.boards.map(board => ({name:board.name, entries:board.images.map(image => ({image, title:image.name}))}))
+ ];
+ for (const {name, entries} of groups) {
+  const grid = document.createElement('div');
+  grid.className = 'study-thumbnails';
+  for (const {image, title} of entries) {
+   if (!image) continue;
+   const button = document.createElement('button');
+   button.type = 'button';
+   const thumbnail = document.createElement('img');
+   thumbnail.alt = '';
+   thumbnail.loading = 'lazy';
+   const url = URL.createObjectURL(image.blob);
+   studyThumbnailUrls.push(url);
+   thumbnail.src = url;
+   const caption = document.createElement('span');
+   caption.textContent = title;
+   button.append(thumbnail, caption);
+   button.onclick = () => {
+    if (singleStudy.working) return;
+    singleStudy.image = image;
+    picker.open = false;
+    renderSingleStudy();
+    picker.querySelector('summary').focus();
+   };
+   grid.append(button);
+  }
+  if (!grid.children.length) continue;
+  const heading = document.createElement('h3');
+  heading.textContent = name;
+  gallery.append(heading, grid);
+ }
+ if (!gallery.children.length) gallery.textContent = 'No references yet. Upload or paste an image to start.';
+}
+
 function renderSingleStudy() {
  const {image, returnBoard} = singleStudy;
- const picker = $('study-reference');
- picker.replaceChildren();
- studyOption(picker, '', 'Choose a reference');
- const saved = document.createElement('optgroup');
- saved.label = 'Saved studies';
- for (const study of library.studies || []) studyOption(saved, study.imageId, study.title);
- if (saved.children.length) picker.append(saved);
- for (const board of library.boards) {
-  if (!board.images.length) continue;
-  const group = document.createElement('optgroup');
-  group.label = board.name;
-  for (const reference of board.images) studyOption(group, reference.id, reference.name);
-  picker.append(group);
- }
- if (image && !Array.from(picker.options).some(option => option.value === image.id)) {
-  studyOption(picker, image.id, image.name);
- }
- picker.value = image?.id || '';
+ renderStudyGallery();
  const savedStudy = library.studies?.find(study => study.imageId === image?.id);
  $('study-title').value = savedStudy?.title ?? image?.name.slice(0, 120) ?? '';
  $('study-notes').value = savedStudy?.notes ?? '';
@@ -155,6 +188,8 @@ async function saveSingleStudy(boardId) {
 function closeSingleStudy() {
  const {returnBoard} = singleStudy;
  singleStudy = null;
+ $('study-reference').open = false;
+ clearStudyGallery();
  document.body.classList.remove('single-study');
  $('study-form').hidden = true;
  $('end-session').textContent = '← End session';
@@ -174,10 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
  $('single-study-home').onclick = () => openSingleStudy();
  $('single-study-board').onclick = () => openSingleStudy(selected);
  $('end-session').onclick = () => singleStudy ? closeSingleStudy() : finishPhase({end:true});
- $('study-reference').onchange = event => {
-  singleStudy.image = studyImages(library).find(image => image.id === event.target.value);
-  renderSingleStudy();
- };
+ $('study-reference').ontoggle = renderStudyGallery;
  $('study-upload').onclick = () => $('study-file').click();
  $('study-file').onchange = event => loadStudyFile(event.target.files[0]);
  $('study-title').oninput = event => event.target.setCustomValidity('');

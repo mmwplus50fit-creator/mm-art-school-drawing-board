@@ -5,7 +5,7 @@
 <section class="soundtrack-panel" aria-labelledby="soundtrack-heading"><h2 id="soundtrack-heading">Drawing soundtrack.</h2><p>A little music for your practice. Paste a YouTube video, livestream or playlist link.</p><form id="soundtrack-form" class="soundtrack-form"><div class="soundtrack-field"><label for="soundtrack-url">YOUTUBE LINK</label><input id="soundtrack-url" type="text" inputmode="url" maxlength="2048" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" aria-describedby="soundtrack-message"></div><button class="primary" type="submit">Load player</button><button id="soundtrack-clear" type="button">Clear</button></form><p id="soundtrack-message" class="soundtrack-message" role="status" aria-live="polite">Loading connects to YouTube. Tap Play in the player to start; your link is remembered on this device.</p></section>
 <div id="drawing-workspace">
 <main id="session" hidden><div class="session-top" tabindex="-1"><button id="end-session" class="back">← End session</button><span id="session-board"></span><button id="fullscreen">⛶ Fullscreen</button></div><div class="session-body"><form id="study-form" hidden>
-<label for="study-reference">Reference or saved study</label><select id="study-reference"></select>
+<details id="study-reference"><summary>Choose a reference</summary><div id="study-gallery"></div></details>
 <div class="study-actions"><button id="study-upload" type="button">Upload image</button><span>Or paste an image here</span></div>
 <input id="study-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" hidden>
 <fieldset id="study-details" hidden><label for="study-title">Study title</label><input id="study-title" maxlength="120" required>

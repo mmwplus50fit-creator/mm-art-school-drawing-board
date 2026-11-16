@@ -100,3 +100,11 @@
 #study-status { font-size: 12px; }
 #study-status:empty { display: none; }
 .board-actions { flex-wrap: wrap; }
+#study-reference { margin-bottom: 12px; }
+#study-reference summary { width: fit-content; padding: 9px 12px; border: 1px solid var(--line); border-radius: 5px; cursor: pointer; font-size: 13px; }
+#study-gallery { max-height: 42vh; overflow: auto; padding: 8px 4px; font-size: 13px; }
+#study-gallery h3 { margin: 8px 0; font-size: 13px; }
+.study-thumbnails { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.study-thumbnails button { min-width: 0; padding: 5px; text-align: left; }
+.study-thumbnails img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #e7e7dd; }
+.study-thumbnails span { display: block; margin-top: 4px; overflow-wrap: anywhere; font-size: 11px; }
